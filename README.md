@@ -2,7 +2,7 @@
 
 # 🚛 Bilibili-Favlist-Export
 
-### **简体中文** / <a href="https://github.com/AHCorn/Bilibili-To-Raindrop/blob/main/README_EN.md"> English </a> 
+### **简体中文** / <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a> 
 
 导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 
