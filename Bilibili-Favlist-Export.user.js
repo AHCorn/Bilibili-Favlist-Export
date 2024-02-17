@@ -68,7 +68,7 @@ function updateCSVHeader() {
     #progress > div {
         width: 0%;
         height: 100%;
-        background-color: #2196F3;
+        background-color: #ff6161;
         transition: width 0.3s ease-in-out;
     }
     #button, #backButton, #confirmButton {
@@ -388,36 +388,54 @@ function changeList() {
 }
 
 
-    function downloadCSV() {
-        let fileName = getCSVFileName();
-        GM_download({
-            url: URL.createObjectURL(new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})),
-            name: fileName,
-            onload: () => {
-                hidePanel();
-            },
-            onerror: () => {
-                alert('下载失败，请检查您的网络或浏览器设置。');
-            }
-        });
-    }
+function downloadCSV() {
+    let fileName = getCSVFileName();
+    let blobUrl = URL.createObjectURL(new Blob([csvContent], {type: 'text/csv;charset=utf-8;'}));
+    GM_download({
+        url: blobUrl,
+        name: fileName,
+        onload: () => {
+            hidePanel();
+        },
+        onerror: () => {
+            alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
+            let htmlContent = `
+<html>
+<head><meta charset="UTF-8"></head>
+<body><a href="${blobUrl}" download="${fileName}">点击下载 CSV 文件</a></body>
+</html>`;
+            let htmlBlob = new Blob([htmlContent], {type: 'text/html;charset=utf-8;'});
+            let htmlBlobUrl = URL.createObjectURL(htmlBlob);
+            window.open(htmlBlobUrl, '_blank');
+        }
+    });
+}
 
-    function downloadHTML() {
-        let fileName = getHTMLFileName();
-      let globalParentFolderName = globalFolderNameInput.value;
-       let htmlFinalContent = htmlTemplateStart.replace ("{globalFolderName}", globalFolderNameInput.value).replace ("{BOOKMARK_TITLE}", bookmarkTitleInput.value.trim ()) + htmlContent+ HTML_TEMPLATE_END;
+function downloadHTML() {
+    let fileName = getHTMLFileName();
+    let globalParentFolderName = globalFolderNameInput.value;
+    let htmlFinalContent = htmlTemplateStart.replace("{globalFolderName}", globalFolderNameInput.value).replace("{BOOKMARK_TITLE}", bookmarkTitleInput.value.trim()) + htmlContent + HTML_TEMPLATE_END;
+    let blobUrl = URL.createObjectURL(new Blob([htmlFinalContent], {type: 'text/html;charset=utf-8;'}));
+    GM_download({
+        url: blobUrl,
+        name: fileName,
+        onload: () => {
+            hidePanel();
+        },
+        onerror: () => {
+            alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
+  let htmlContent = `
+<html>
+<head><meta charset="UTF-8"></head>
+<body><a href="${blobUrl}" download="${fileName}">点击下载 HTML 文件</a></body>
+</html>`;
+            let htmlBlob = new Blob([htmlContent], {type: 'text/html;charset=utf-8;'});
+            let htmlBlobUrl = URL.createObjectURL(htmlBlob);
+            window.open(htmlBlobUrl, '_blank');
+        }
+    });
+}
 
-        GM_download({
-            url: URL.createObjectURL(new Blob([htmlFinalContent], {type: 'text/html;charset=utf-8;'})),
-            name: fileName,
-            onload: () => {
-                hidePanel();
-            },
-            onerror: () => {
-                alert('下载失败，请检查您的网络或浏览器设置。');
-            }
-        });
-    }
 
     function createPanel() {
         panel = document.createElement("div");
