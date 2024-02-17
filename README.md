@@ -19,6 +19,8 @@ Export Bilibili favorites to CSV or HTML files for importing into Raindrop or Fi
 
 本脚本刚刚发布，个人虽已反复测试数十遍，但仍可能有未被发现的潜在问题，鉴于导出时间较长，请慎重选择。
 
+本脚本所使用的 CSV 格式为 Raindrop 所要求的格式，HTML 为 Firefox 所使用的备份格式，对于其它浏览器兼容性未知。
+
 导出速度固定在代码中的 ``` const DELAY = 2000; ``` 部分，如果您的加载速度足够，可以降低延时。
 
 如果您出现了收藏夹错位的情况，则是网络条件和导出延时不匹配。
