@@ -46,7 +46,7 @@ function updateCSVHeader() {
         left: 50%;
         transform: translate(-50%, -50%);
         width: 320px;
-        height: 360px; /* Increased height for additional buttons */
+        height: 360px; // 面板高度重新调整为 360 以免不对称
         background-color: white;
         border: 1px solid #fff;
         border-radius: 10px;
