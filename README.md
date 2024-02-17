@@ -37,14 +37,6 @@ Export Bilibili favorites to CSV or HTML files for importing into Raindrop or Fi
    
 <br>
 
-## 📸 预览
-
-<div align ="center">
-
-![image](https://github.com/AHCorn/Bilibili-To-Raindrop/assets/42889600/bf9ded43-7996-47ac-8aea-077991cf25d6)
-
-</div>
- <br>
 
 ## 💻 使用
 该版本是 [Bilibili-To-Raindrop](https://github.com/AHCorn/Bilibili-To-Raindrop) 的衍生版本，操作更为便捷，支持格式和自定义程度更广。
