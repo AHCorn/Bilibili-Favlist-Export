@@ -2,7 +2,7 @@
 
 # 🚛 Bilibili-Favlist-Export
 
-### Simplified Chinese / <a href="https://github.com/AHCorn/Bilibili-To-Raindrop/blob/main/README_EN.md"> English </a> 
+### <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/"> Simplified Chinese </a>  / English 
 
 Export Bilibili favorites to CSV or HTML files for importing into Raindrop or Firefox.
 
