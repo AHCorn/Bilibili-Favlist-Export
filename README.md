@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚛 Bilibili-Favlist-Export
+# 🚛 [Bilibili-Favlist-Export](https://greasyfork.org/zh-CN/scripts/487532-%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E5%AF%BC%E5%87%BA)
 
 ### **简体中文** / <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a> 
 
