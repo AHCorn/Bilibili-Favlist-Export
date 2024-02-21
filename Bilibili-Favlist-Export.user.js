@@ -2,7 +2,7 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.0
+// @version      1.1
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
 // @match        http*://space.bilibili.com/*/*
@@ -259,6 +259,7 @@ function updateCSVHeader() {
     let bookmarkTitleInput = null;
     let globalFolderNameInput = null;
     let csvOptionsSection = null;
+    let lastAddedFolderName = "";
     let totalPage = 0;
     let currentPage = 0;
     let isExporting = false;
@@ -285,15 +286,17 @@ function updateCSVHeader() {
     function getCurrentTimestamp() {
         return Math.floor(Date.now() / 1000);
     }
-
-    function addHTMLFolder(folderName) {
-        if (folderName !== globalParentFolderName) {
-            if (globalParentFolderName !== "") {
-                htmlContent += `</DL><p>\n`;
-            }
-            let dateNow = getCurrentTimestamp();
+    
+function addHTMLFolder(folderName) {
+    let dateNow = getCurrentTimestamp();
+    if (folderName !== lastAddedFolderName) { 
+        if (lastAddedFolderName !== "") {
+            htmlContent += `</DL><p>\n`;
         }
+        htmlContent += `<DT><H3 ADD_DATE="${dateNow}" LAST_MODIFIED="${dateNow}">${folderName}</H3>\n<DL><p>\n`;
+        lastAddedFolderName = folderName; 
     }
+}
 
     function addHTMLBookmark(folderName, title, url) {
         addHTMLFolder(folderName);
@@ -309,15 +312,6 @@ function generateCSVLine(folderName, title, url) {
     return parts.join(',');
 }
 
-    function addHTMLFolder(folderName) {
-        let dateNow = getCurrentTimestamp();
-        if (folderName !== globalParentFolderName) {
-            if (globalParentFolderName !== "") {
-                htmlContent += `</DL><p>\n`;
-            }
-        }
-        htmlContent += `<DT><H3 ADD_DATE="${dateNow}" LAST_MODIFIED="${dateNow}">${folderName}</H3>\n<DL><p>\n`;
-    }
 
     function getVideosFromPage() {
         var results = [];
