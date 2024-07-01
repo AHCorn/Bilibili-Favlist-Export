@@ -1,18 +1,14 @@
 <div align="center">
 
-# 🚛 [Bilibili-Favlist-Export](https://greasyfork.org/zh-CN/scripts/487532-%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E5%AF%BC%E5%87%BA)
+<a href="https://greasyfork.org/zh-CN/scripts/487532-%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E5%AF%BC%E5%87%BA"> ![Bilibili-Favlist-Export](https://socialify.git.ci/AHCorn/Bilibili-Favlist-Export/image?description=1&descriptionEditable=%E5%AF%BC%E5%87%BA%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E4%B8%BA%20CSV%20%E6%88%96%20HTML%20%E6%96%87%E4%BB%B6%EF%BC%8C%E4%BB%A5%E4%BE%BF%E5%AF%BC%E5%85%A5%20Raindrop%20%E6%88%96%20Firefox&font=KoHo&forks=1&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Auto) </a>
 
-### **简体中文** / <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a> 
+### **简体中文** | <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a> 
 
-导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 
-Export Bilibili favorites to CSV or HTML files for importing into Raindrop or Firefox.
-
-![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) 
 
 </div>
 
-## ⚠ 温馨提示
+## ⚠ 用前须知
 本脚本的首选下载功能仅在 Vivaldi 浏览器的**暴力猴**插件中测试通过。
 
 篡改猴或其余浏览器需新建标签页下载，为保险起见，在使用前，**请一定要为哔哩哔哩开启弹窗权限**❗
