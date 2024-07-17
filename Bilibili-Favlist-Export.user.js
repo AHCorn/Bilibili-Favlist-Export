@@ -2,15 +2,16 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.1
+// @version      2.0
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
 // @match        http*://space.bilibili.com/*/*
 // @grant        GM_addStyle
 // @grant        GM_download
 // @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // ==/UserScript==
-
 
 (function () {
     'use strict';
@@ -19,12 +20,13 @@
     let csvHeaderOptions = {
         title: "\uFEFFtitle",
         url: "url",
-        foldername: "folder"
+        foldername: "folder",
+        created: "created"
     };
-    let csvHeaderActive = ["\uFEFFtitle", "url", "folder"];
-function updateCSVHeader() {
-    csvHeaderActive = Object.keys(csvHeaderOptions).filter(option => csvInclude[option]).map(option => csvHeaderOptions[option]);
-}
+    let csvHeaderActive = ["\uFEFFtitle", "url", "folder", "created"];
+    function updateCSVHeader() {
+        csvHeaderActive = Object.keys(csvHeaderOptions).filter(option => csvInclude[option]).map(option => csvHeaderOptions[option]);
+    }
     let csvContent = csvHeaderActive.join(",") + "\n";
     let htmlTemplateStart = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -37,233 +39,270 @@ function updateCSVHeader() {
     let csvInclude = {
         title: true,
         url: true,
-        foldername: true
+        foldername: true,
+        created: true
     };
-    const PANEL_STYLE = `
-    #Panel {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 320px;
-        height: 360px;
-        background-color: white;
-        border: 1px solid #fff;
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.2);
-        z-index: 9999;
-        display: none;
-        transition: opacity 0.3s ease-in-out;
-    }
-    #progress {
-        position: absolute;
-        top: 260px;
-        left: 35px;
-        width: 250px;
-        height: 30px;
-        border: 1px solid #2196F3;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    #progress > div {
-        width: 0%;
-        height: 100%;
-        background-color: #ff6161;
-        transition: width 0.3s ease-in-out;
-    }
-    #button, #backButton, #confirmButton {
-        position: absolute;
-        bottom: 25px;
-        width: 100px;
-        height: 30px;
-        background-color: #2196F3;
-        border: none;
-        border-radius: 10px;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s ease-in-out;
-    }
-    #button:hover, #backButton:hover, #confirmButton:hover {
-        background-color: #64B5F6;
-    }
-    #button:active, #backButton:active, #confirmButton:active {
-        background-color: #1976D2;
-    }
-#button {
-    width:255px;
-        margin-left: 35px;
+    let exportCurrentFolderOnly = false;
 
-}
-#confirmButton {
-    left: calc(50% - 125px);
-    display:none!important;
-}
-    #backButton {
-        left: 35px;
-    }
-    #cancel {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 20px;
-        height: 20px;
-        border: none;
-        border-radius: 50%;
-        background-color: #F44336;
-        color: white;
-        font-size: 16px;
-        font-weight: bold;
-        text-align: center;
-        line-height: 20px;
-        cursor: pointer;
-        transition: background-color 0.3s ease-in-out;
-    }
-    #cancel:hover {
-        background-color: #EF5350;
-    }
-    #cancel:active {
-        background-color: #E53935;
-    }
-    #tip, #inputTip {
-        position: absolute;
-        top: 25px;
-        left: 35px;
-        width: 250px;
-        height: 20px;
-        color: #2196F3;
-        font-size: 15px;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        line-height: 20px;
-    }
-    #inputTip {
-        top: 235px;
-    }
-    #formatSelector {
-        position: absolute;
-        top: 60px;
-        left: 35px;
-        width: 250px;
-        height: 40px;
-        background-color: #f0f0f0;
-        border: 1px solid #2196F3;
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-around;
-        padding: 5px;
-        box-sizing: border-box;
-    }
-    .csvOptionButton {
-        display: block;
-        width: 90%;
-        margin: 5px auto;
-        padding: 10px;
-        border: 1px solid #007bff;
-        border-radius: 5px;
-        background-color: white;
-        color: #3596ff;
-        cursor: pointer;
-        font-size: 16px;
-        transition: all 0.3s ease;
-    }
-    .csvOptionButton.selected {
-    transition: font-weight 1s ease-in-out;
-        background-color: #3596ff;
-        color: white;
-    }
-    .formatButton {
-    z-index:1;
-        display: inline-block;
-        width: 110px;
-        height: 30px;
-        line-height: 30px;
-        text-align: center;
-        border: none;
-        border-radius: 15px;
-        background-color: transparent;
-        cursor: pointer;
-        transition: color 0.3s ease-in-out;
-    }
-    .formatButton.selected {
-        font-weight: bold;
-        color: #FFF;
-    }
-    .slider {
-        position: absolute;
-        left: 5px;
-        top: 5px;
-        background-color: #2196F3;
-        border-radius: 15px;
-        transition: left 0.3s ease-in-out;
-        width: 110px;
-        height: 30px;
-        z-index: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-weight: bold;
-    }
-    .folderInputSection input {
-    width:205px!important;
-    margin:6px;
-    padding:18px!important;
-    }
-    .folderInputSection, .csvOptionsSection {
-        position: absolute;
-        top: 110px;
-        left: 35px;
-        width: 250px;
-        display: none;
-    }
-    .csvOptionsSection > .csvOptionButton {
-    width:250px!important;
-    }
-    .folderInputSection > input, .csvOptionsSection > .csvOptionButton {
-        padding: 9px;
+    GM_addStyle(`
+        #bilibili-export-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #f6f8fa, #e9ecef);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 1px 8px rgba(0, 0, 0, 0.06);
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            display: none;
+            z-index: 10000;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
 
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 14px;
-    }
-    .successModal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 300px;
-        padding: 20px;
-        background-color: white;
-        border: 1px solid #2196F3;
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.3);
-        z-index: 10000;
-        text-align: center;
-        display: none;
-    }
-    `;
+        #bilibili-export-panel h2 {
+            margin: 0 0 20px;
+            color: #00a1d6;
+            font-size: 28px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        #current-exporting {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: rgba(0, 161, 214, 0.1);
+            border-left: 4px solid #00a1d6;
+            border-right: 4px solid #00a1d6;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #00a1d6;
+            text-align: center;
+            transition: all 0.5s ease;
+        }
+
+        #current-exporting.completed {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left-color: #4CAF50;
+            border-right-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        #current-exporting.completed {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        #formatSelector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+            position: relative;
+            background-color: #e0e0e0;
+            border-radius: 20px;
+            padding: 5px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .formatButton {
+            z-index: 1;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #3c4043;
+            cursor: pointer;
+            transition: color 0.3s ease-in-out;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+        }
+
+        .formatButton.selected {
+            color: #FFF;
+        }
+
+        .slider {
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            background-color: #00a1d6;
+            border-radius: 15px;
+            transition: transform 0.3s ease-in-out;
+            height: calc(100% - 10px);
+            width: calc(50% - 5px);
+            z-index: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            background-color: #f1f3f4;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch:hover {
+            background-color: #e8eaed;
+        }
+
+        .toggle-switch label {
+            font-size: 16px;
+            color: #3c4043;
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .switch-slider {
+            background-color: #00a1d6;
+        }
+
+        input:checked + .switch-slider:before {
+            transform: translateX(24px);
+        }
+
+        #export-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #00a1d6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #export-button:hover {
+            background-color: #0091c2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 161, 214, 0.3);
+        }
+
+        #export-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #export-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background-color: rgba(255,255,255,0.2);
+            transition: width 0.3s ease;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translate(-50%, -60%); }
+            to { transform: translate(-50%, -50%); }
+        }
+
+        #bilibili-export-panel.show {
+            display: block;
+            animation: fadeIn 0.3s ease-out, slideIn 0.3s ease-out;
+        }
+
+        #panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+        }
+    `);
 
     let gen = listGen();
     let panel = null;
-    let progress = null;
-    let button = null;
-    let confirmButton = null;
-    let cancel = null;
-    let tip = null;
-    let inputTip = null;
-    let formatSelector = null;
-    let slider = null;
+    let exportButton = null;
+    let formatButtons = null;
     let folderInputSection = null;
     let bookmarkTitleInput = null;
     let globalFolderNameInput = null;
-    let csvOptionsSection = null;
     let lastAddedFolderName = "";
     let totalPage = 0;
     let currentPage = 0;
     let isExporting = false;
-    let exportFormat = "csv";
+    let exportFormat = GM_getValue('exportFormat', 'csv');
 
     function getCSVFileName() {
         let userName = $("#h-name").text();
@@ -286,101 +325,180 @@ function updateCSVHeader() {
     function getCurrentTimestamp() {
         return Math.floor(Date.now() / 1000);
     }
-    
-function addHTMLFolder(folderName) {
-    let dateNow = getCurrentTimestamp();
-    if (folderName !== lastAddedFolderName) { 
-        if (lastAddedFolderName !== "") {
-            htmlContent += `</DL><p>\n`;
-        }
-        htmlContent += `<DT><H3 ADD_DATE="${dateNow}" LAST_MODIFIED="${dateNow}">${folderName}</H3>\n<DL><p>\n`;
-        lastAddedFolderName = folderName; 
-    }
-}
 
-    function addHTMLBookmark(folderName, title, url) {
-        addHTMLFolder(folderName);
+    function addHTMLFolder(folderName) {
         let dateNow = getCurrentTimestamp();
+        if (folderName !== lastAddedFolderName) {
+            if (lastAddedFolderName !== "") {
+                htmlContent += `</DL><p>\n`;
+            }
+            htmlContent += `<DT><H3 ADD_DATE="${dateNow}" LAST_MODIFIED="${dateNow}">${folderName}</H3>\n<DL><p>\n`;
+            lastAddedFolderName = folderName;
+        }
+    }
+
+    function addHTMLBookmark(folderName, title, url, created) {
+        addHTMLFolder(folderName);
+        let dateNow = new Date(created).getTime() / 1000;
         htmlContent += `<DT><A HREF="${url}" ADD_DATE="${dateNow}" LAST_MODIFIED="${dateNow}">${title}</A>\n`;
     }
 
-function generateCSVLine(folderName, title, url) {
-    let parts = [];
-    if (csvInclude.title) parts.push(escapeCSV(title));
-    if (csvInclude.url) parts.push(escapeCSV(url));
-    if (csvInclude.foldername) parts.push(escapeCSV(folderName));
-    return parts.join(',');
-}
+    function generateCSVLine(folderName, title, url, created) {
+        let parts = [];
+        if (csvInclude.title) parts.push(escapeCSV(title));
+        if (csvInclude.url) parts.push(escapeCSV(url));
+        if (csvInclude.foldername) parts.push(escapeCSV(folderName));
+        if (csvInclude.created) parts.push(escapeCSV(created));
+        return parts.join(',');
+    }
 
+function parseTime(timeText) {
+    let now = new Date();
+    let time;
+
+    if (timeText.includes("天前")) {
+        let days = parseInt(timeText);
+        time = new Date(now - days * 24 * 60 * 60 * 1000);
+    } else if (timeText.includes("周前")) {
+        let weeks = parseInt(timeText);
+        time = new Date(now - weeks * 7 * 24 * 60 * 60 * 1000);
+    } else if (timeText.includes("小时前")) {
+        let hours = parseInt(timeText);
+        time = new Date(now - hours * 60 * 60 * 1000);
+    } else if (timeText.includes("分钟前")) {
+        let minutes = parseInt(timeText);
+        time = new Date(now - minutes * 60 * 1000);
+    } else {
+        let [month, day] = timeText.split('-').map(Number);
+        let year = now.getFullYear();
+        let fullDate = new Date(year, month - 1, day);
+        if (fullDate > now) {
+            year--;
+        }
+        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    }
+
+    return time.toISOString().split('T')[0];
+}
 
     function getVideosFromPage() {
         var results = [];
         var folderName = getFolderName().replace(/\//g, '\\');
-        $(".fav-video-list > li > a.title").each(function () {
-            var title = $(this).text().replace(/,/g, '');
+        $(".fav-video-list > li").each(function () {
+            var titleElement = $(this).find("a.title");
+            var title = titleElement.text().replace(/,/g, '');
             if (title !== "已失效视频") {
-                var url = 'https:' + $(this).attr("href");
-                results.push(generateCSVLine(folderName, title, url));
+                var url = 'https:' + titleElement.attr("href");
+                var timeElement = $(this).find(".meta.pubdate");
+                var timeText = timeElement.text().trim().replace("收藏于：", "").trim();
+                var created = parseTime(timeText);
+                results.push(generateCSVLine(folderName, title, url, created));
                 if (exportFormat === "html") {
-                    addHTMLBookmark(folderName, title, url);
+                    addHTMLBookmark(folderName, title, url, created);
                 }
             }
         });
         return results.join('\n');
     }
 
-    function processVideos () {
+function processVideos() {
         if (isExporting) {
-            csvContent += getVideosFromPage () + '\n';
+            csvContent += getVideosFromPage() + '\n';
             currentPage++;
-            updateProgress ();
-            if ($(".be-pager-next:visible").length == 0) {
-                setTimeout (changeList, DELAY);
+            updateProgress(Math.round((currentPage / totalPage) * 100));
+            if (currentPage >= totalPage || $(".be-pager-next:visible").length == 0) {
+                if (exportCurrentFolderOnly) {
+                    finishExport();
+                } else {
+                    setTimeout(changeList, DELAY);
+                }
             } else {
-                $(".be-pager-next").click ();
-                setTimeout (processVideos, DELAY);
+                $(".be-pager-next").click();
+                setTimeout(processVideos, DELAY);
             }
         }
     }
-    function* listGen() {
-        for (let list of $("#fav-createdList-container .fav-item a").get()) {
-            yield list;
-        }
+
+function* listGen() {
+    for (let list of $("#fav-createdList-container .fav-item a").get()) {
+        yield list;
     }
+}
 
 function changeList() {
     if (isExporting) {
-        let list = gen.next().value;
-        if (list) {
-            list.click();
-            setTimeout(() => {
-                totalPage = parseInt($(".be-pager-total").text().match(/\d+/)[0]);
-                currentPage = 0;
-                updateProgress();
-                updateTip();
-                processVideos();
-            }, DELAY);
+        if (exportCurrentFolderOnly) {
+            processVideos();
         } else {
-            isExporting = false;
-            button.textContent = "立即下载";
-            button.disabled = false;
-            button.onclick = () => {
-                if (exportFormat === "csv") {
-                    downloadCSV();
-                } else if (exportFormat === "html") {
-                    downloadHTML();
-                }
-                button.textContent = "开始导出";
-                button.disabled = true;
+            let list = gen.next().value;
+            if (list) {
+                list.click();
                 setTimeout(() => {
-                    button.disabled = false;
-                }, 3000);
-            };
-
+                    totalPage = parseInt($(".be-pager-total").text().match(/\d+/)[0]) || 1;
+                    currentPage = 0;
+                    updateProgress(0);
+                    let currentFolderName = getFolderName();
+                    document.querySelector('#current-exporting').textContent = `正在导出：${currentFolderName}`;
+                    document.querySelector('#current-exporting').classList.remove('completed');
+                    processVideos();
+                }, DELAY);
+            } else {
+                finishExport();
+            }
         }
     }
 }
 
+function updateProgress(percentage) {
+    exportButton.textContent = `导出中... ${percentage}%`;
+    exportButton.style.setProperty('--progress', `${percentage}%`);
+    exportButton.style.backgroundImage = `linear-gradient(to right, rgba(255,255,255,0.2) ${percentage}%, transparent ${percentage}%)`;
+}
+
+function finishExport() {
+    isExporting = false;
+    exportButton.textContent = "立即下载";
+    exportButton.disabled = false;
+    let currentExporting = document.querySelector('#current-exporting');
+    currentExporting.textContent = "导出完成";
+    currentExporting.classList.add('completed');
+    exportButton.onclick = () => {
+        if (exportFormat === "csv") {
+            downloadCSV();
+        } else if (exportFormat === "html") {
+            downloadHTML();
+        }
+        exportButton.textContent = "开始导出";
+        exportButton.disabled = true;
+        setTimeout(() => {
+            exportButton.disabled = false;
+        }, 3000);
+    };
+}
+
+function startExport() {
+    if (exportFormat === "html" && (!bookmarkTitleInput.value || !globalFolderNameInput.value)) {
+        alert("请配置书签标题和全局父文件夹名称。");
+        return;
+    }
+    GM_setValue('bookmarkTitle', bookmarkTitleInput.value);
+    GM_setValue('globalFolderName', globalFolderNameInput.value);
+    exportButton.disabled = true;
+    exportButton.textContent = "导出中... 0%";
+    isExporting = true;
+    htmlContent = "";
+    csvContent = "\uFEFF" + csvHeaderActive.join(",") + "\n";
+    document.querySelector('#current-exporting').textContent = "准备开始导出...";
+    document.querySelector('#current-exporting').classList.remove('completed');
+    if (exportCurrentFolderOnly) {
+        totalPage = parseInt($(".be-pager-total").text().match(/\d+/)[0]) || 1;
+        currentPage = 0;
+        processVideos();
+    } else {
+        gen = listGen();
+        changeList();
+    }
+}
 
 function downloadCSV() {
     let fileName = getCSVFileName();
@@ -418,7 +536,7 @@ function downloadHTML() {
         },
         onerror: () => {
             alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
-  let htmlContent = `
+            let htmlContent = `
 <html>
 <head><meta charset="UTF-8"></head>
 <body><a href="${blobUrl}" download="${fileName}">点击下载 HTML 文件</a></body>
@@ -430,186 +548,160 @@ function downloadHTML() {
     });
 }
 
+function createPanel() {
+    panel = document.createElement("div");
+    panel.id = "bilibili-export-panel";
+    panel.innerHTML = `
+        <h2>收藏夹导出设置</h2>
+        <div id="current-exporting">点击下方按钮开始导出</div>
+        <div id="formatSelector">
+            <div class="slider"></div>
+            <div class="formatButton" data-format="csv">CSV 格式</div>
+            <div class="formatButton" data-format="html">HTML 格式</div>
+        </div>
+        <div id="csv-options">
+            <div class="toggle-switch">
+                <label for="include-title">包含标题</label>
+                <label class="switch">
+                    <input type="checkbox" id="include-title" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="toggle-switch">
+                <label for="include-url">包含网址</label>
+                <label class="switch">
+                    <input type="checkbox" id="include-url" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="toggle-switch">
+                <label for="include-foldername">包含收藏夹名称</label>
+                <label class="switch">
+                    <input type="checkbox" id="include-foldername" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="toggle-switch">
+                <label for="include-created">包含收藏时间</label>
+                <label class="switch">
+                    <input type="checkbox" id="include-created" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div id="html-options" style="display: none;">
+            <div class="input-group">
+                <input type="text" id="bookmark-title" placeholder="书签标题 (H1)">
+            </div>
+            <div class="input-group">
+                <input type="text" id="global-folder-name" placeholder="全局父文件夹名称">
+            </div>
+        </div>
+        <div class="toggle-switch">
+            <label for="export-current-folder-only">仅导出当前文件夹</label>
+            <label class="switch">
+                <input type="checkbox" id="export-current-folder-only">
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+        <button id="export-button">开始导出</button>
+    `;
+    document.body.appendChild(panel);
 
-    function createPanel() {
-        panel = document.createElement("div");
-        panel.id = "Panel";
-        document.body.appendChild(panel);
+    let overlay = document.createElement("div");
+    overlay.id = "panel-overlay";
+    document.body.appendChild(overlay);
 
-        formatSelector = document.createElement("div");
-        formatSelector.id = "formatSelector";
-        slider = document.createElement("div");
-        slider.className = "slider";
-        formatSelector.appendChild(slider);
-        let csvButton = document.createElement("div");
-        csvButton.className = "formatButton selected";
-        csvButton.textContent = "CSV";
-        csvButton.addEventListener("click", () => {
-            exportFormat = "csv";
-            slider.style.left = "9px";
-            csvButton.classList.add("selected");
-            htmlButton.classList.remove("selected");
-            folderInputSection.style.display = "none";
-            csvOptionsSection.style.display = "block";
-            confirmButton.style.display = "block";
+    formatButtons = panel.querySelectorAll('.formatButton');
+    formatButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            exportFormat = button.dataset.format;
+            GM_setValue('exportFormat', exportFormat);
+            updateFormatButtons();
+            toggleOptions();
         });
-        let htmlButton = document.createElement("div");
-        htmlButton.className = "formatButton";
-        htmlButton.textContent = "HTML";
-        htmlButton.addEventListener("click", () => {
-            exportFormat = "html";
-            slider.style.left = "126px";
-            htmlButton.classList.add("selected");
-            csvButton.classList.remove("selected");
-            folderInputSection.style.display = "block";
-            csvOptionsSection.style.display = "none";
-            confirmButton.style.display = "block";
+    });
+
+    folderInputSection = panel.querySelector('#html-options');
+    bookmarkTitleInput = panel.querySelector('#bookmark-title');
+    globalFolderNameInput = panel.querySelector('#global-folder-name');
+
+    ['title', 'url', 'foldername', 'created'].forEach(option => {
+        panel.querySelector(`#include-${option}`).addEventListener('change', (e) => {
+            csvInclude[option] = e.target.checked;
+            GM_setValue(`include_${option}`, csvInclude[option]);
+            updateCSVHeader();
         });
-        formatSelector.appendChild(csvButton);
-        formatSelector.appendChild(htmlButton);
-        panel.appendChild(formatSelector);
+    });
 
-        folderInputSection = document.createElement("div");
-        folderInputSection.className = "folderInputSection";
-        bookmarkTitleInput = document.createElement("input");
-        bookmarkTitleInput.placeholder = "书签标题 (H1)";
-        folderInputSection.appendChild(bookmarkTitleInput);
-        globalFolderNameInput = document.createElement("input");
-        globalFolderNameInput.placeholder = "全局父文件夹名称";
-        folderInputSection.appendChild(globalFolderNameInput);
-        panel.appendChild(folderInputSection);
+    panel.querySelector('#export-current-folder-only').addEventListener('change', (e) => {
+        exportCurrentFolderOnly = e.target.checked;
+        GM_setValue('exportCurrentFolderOnly', exportCurrentFolderOnly);
+    });
 
-        csvOptionsSection = document.createElement("div");
-        csvOptionsSection.className = "csvOptionsSection";
-        csvOptionsSection.style.display = "block";
-        ["title", "url", "foldername"].forEach((option) => {
-            let button = document.createElement("button");
-            button.className = "csvOptionButton" + (csvInclude[option] ? " selected" : "");
-            button.textContent = option;
-            button.onclick = () => {
-                csvInclude[option] = !csvInclude[option];
-                button.classList.toggle("selected");
-                updateCSVHeader();
-                csvContent = csvHeaderActive.join(",") + "\n";
-            };
-            csvOptionsSection.appendChild(button);
-        });
-        panel.appendChild(csvOptionsSection);
+    exportButton = panel.querySelector('#export-button');
+    exportButton.onclick = startExport;
 
-        confirmButton = document.createElement("button");
-        confirmButton.id = "confirmButton";
-        confirmButton.textContent = "确认";
-        confirmButton.style.display = "none";
-        confirmButton.onclick = () => {
-            if (exportFormat === "html" && (!bookmarkTitleInput.value || !globalFolderNameInput.value)) {
-                alert("请配置书签标题和全局父文件夹名称。");
-                return;
-            }
-            showSuccessModal("设置已保存成功！");
-        };
-        panel.appendChild(confirmButton);
-    }
+    overlay.addEventListener('click', hidePanel);
 
-    function createProgress() {
-        progress = document.createElement("div");
-        progress.id = "progress";
-        let bar = document.createElement("div");
-        progress.appendChild(bar);
-        panel.appendChild(progress);
-    }
+    updateFormatButtons();
+    toggleOptions();
+    loadSavedSettings();
+}
 
-    function createButton() {
-        button = document.createElement("button");
-        button.id = "button";
-        button.textContent = "开始导出";
-        button.onclick = () => {
-            if (exportFormat === "html" && (!bookmarkTitleInput.value || !globalFolderNameInput.value)) {
-                alert("请配置书签标题和全局父文件夹名称。");
-                return;
-            }
-            button.disabled = true;
-            button.textContent = "导出中...";
-            isExporting = true;
-            htmlContent = "";
-            csvContent = csvHeaderActive.join(",") + "\n";
-            changeList();
-        };
-        panel.appendChild(button);
-    }
+function updateFormatButtons() {
+    formatButtons.forEach(button => {
+        button.classList.toggle('selected', button.dataset.format === exportFormat);
+    });
+    const slider = panel.querySelector('.slider');
+    slider.style.transform = exportFormat === 'csv' ? 'translateX(0)' : 'translateX(100%)';
+}
 
-    function createCancel() {
-        cancel = document.createElement("button");
-        cancel.id = "cancel";
-        cancel.textContent = "×";
-        cancel.onclick = () => {
-            isExporting = false;
-            button.disabled = false;
-            button.textContent = "开始导出";
-            hidePanel();
-        };
-        panel.appendChild(cancel);
-    }
+function toggleOptions() {
+    panel.querySelector('#csv-options').style.display = exportFormat === 'csv' ? 'block' : 'none';
+    panel.querySelector('#html-options').style.display = exportFormat === 'html' ? 'block' : 'none';
+}
 
-    function createTip() {
-        tip = document.createElement("div");
-        tip.id = "tip";
-        tip.textContent = "当前正在导出：";
-        panel.appendChild(tip);
-    }
-//废弃
-    function showSuccessModal(message) {
-        let modal = document.createElement("div");
-        modal.className = "successModal";
-        modal.textContent = message;
-        document.body.appendChild(modal);
-        modal.style.display = "block";
-        setTimeout(() => {
-            modal.style.opacity = 0;
-            setTimeout(() => {
-                document.body.removeChild(modal);
-            }, 500);
-        }, 2000);
-    }
+function loadSavedSettings() {
+    ['title', 'url', 'foldername', 'created'].forEach(option => {
+        const saved = GM_getValue(`include_${option}`);
+        if (saved !== undefined) {
+            csvInclude[option] = saved;
+            panel.querySelector(`#include-${option}`).checked = saved;
+        }
+    });
+    updateCSVHeader();
 
-    function showPanel() {
-        panel.style.opacity = 0;
-        panel.style.display = "block";
-        setTimeout(() => {
-            panel.style.opacity = 1;
-        }, 0);
-        confirmButton.style.display = exportFormat === "html" ? "block" : "block";
-    }
+    bookmarkTitleInput.value = GM_getValue('bookmarkTitle', '');
+    globalFolderNameInput.value = GM_getValue('globalFolderName', '');
+    exportCurrentFolderOnly = GM_getValue('exportCurrentFolderOnly', false);
+    panel.querySelector('#export-current-folder-only').checked = exportCurrentFolderOnly;
+}
 
-    function hidePanel() {
-        panel.style.opacity = 0;
-        setTimeout(() => {
-            panel.style.display = "none";
-        }, 300);
-    }
+function showPanel() {
+    panel.style.opacity = 0;
+    panel.style.display = 'block';
+    document.getElementById('panel-overlay').style.display = 'block';
+    setTimeout(() => {
+        panel.style.opacity = 1;
+    }, 0);
+}
 
-    function updateProgress() {
-        let percentage = Math.round(currentPage / totalPage * 100) + "%";
-        progress.querySelector("div").style.width = percentage;
-        progress.title = percentage;
-    }
+function hidePanel() {
+    panel.style.opacity = 0;
+    document.getElementById('panel-overlay').style.display = 'none';
+    setTimeout(() => {
+        panel.style.display = 'none';
+    }, 300);
+}
 
-    function updateTip() {
-        let folderName = getFolderName();
-        tip.textContent = "当前正在导出：" + folderName;
-    }
+function init() {
+    createPanel();
+    GM_registerMenuCommand("导出 Bilibili 收藏夹", showPanel);
+}
 
-    function init() {
-        GM_addStyle(PANEL_STYLE);
-        createPanel();
-        createProgress();
-        createButton();
-        createCancel();
-        createTip();
-      updateCSVHeader();
-        GM_registerMenuCommand("导出 Bilibili 收藏夹", showPanel);
-    }
+if (location.href.includes("https://space.bilibili.com/") && location.href.includes("/favlist")) {
+    init();
+}
 
-    if (location.href.includes("https://space.bilibili.com/") && location.href.includes("/favlist")) {
-        init();
-    }
 })();
