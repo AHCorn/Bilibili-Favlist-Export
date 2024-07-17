@@ -1,12 +1,19 @@
 <div align="center">
 
-<a href="https://greasyfork.org/zh-CN/scripts/487532-%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E5%AF%BC%E5%87%BA"> ![Bilibili-Favlist-Export](https://socialify.git.ci/AHCorn/Bilibili-Favlist-Export/image?description=1&descriptionEditable=%E5%AF%BC%E5%87%BA%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E4%B8%BA%20CSV%20%E6%88%96%20HTML%20%E6%96%87%E4%BB%B6%EF%BC%8C%E4%BB%A5%E4%BE%BF%E5%AF%BC%E5%85%A5%20Raindrop%20%E6%88%96%20Firefox&font=KoHo&forks=1&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Auto) </a>
+#  <img src="https://www.bilibili.com/favicon.ico" width="30" height="30" style="vertical-align: text-bottom;">  <a href="https://greasyfork.org/zh-CN/scripts/487532-%E5%93%94%E5%93%A9%E5%93%A9%E5%93%A9%E5%93%A9%E6%94%B6%E8%97%8F%E5%A4%B9%E5%AF%BC%E5%87%BA" style="text-decoration: none;"> Bilibili-Favlist-Export </a>
 
-### **简体中文** | <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a> 
+#### **简体中文** | <a href="https://github.com/AHCorn/Bilibili-Favlist-Export/blob/main/README_EN.md"> English </a>
 
+导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox
 
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
+![GitHub stars](https://img.shields.io/github/stars/AHCorn/Bilibili-Favlist-Export?style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues/AHCorn/Bilibili-Favlist-Export?style=for-the-badge)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/AHCorn/Bilibili-Favlist-Export?style=for-the-badge)
+![GitHub forks](https://img.shields.io/github/forks/AHCorn/Bilibili-Favlist-Export?style=for-the-badge)
 
 </div>
+
 
 ## ⚠ 用前须知
 本脚本的首选下载功能仅在 Vivaldi 浏览器的**暴力猴**插件中测试通过。
