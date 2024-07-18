@@ -2,7 +2,8 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      2.1
+// @version      2.1.1
+// @license      GPL-3.0
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
 // @match        http*://space.bilibili.com/*/*
@@ -11,6 +12,8 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @updateURL    https://github.com/AHCorn/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
+// @downloadURL  https://github.com/AHCorn/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
 // ==/UserScript==
 
 (function () {
