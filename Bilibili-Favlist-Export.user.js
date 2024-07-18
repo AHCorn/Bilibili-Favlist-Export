@@ -2,7 +2,7 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      2.0
+// @version      2.1
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
 // @match        http*://space.bilibili.com/*/*
@@ -354,31 +354,41 @@
 
 function parseTime(timeText) {
     let now = new Date();
-    let time;
+    let currentYear = now.getFullYear();
 
-    if (timeText.includes("天前")) {
-        let days = parseInt(timeText);
-        time = new Date(now - days * 24 * 60 * 60 * 1000);
-    } else if (timeText.includes("周前")) {
-        let weeks = parseInt(timeText);
-        time = new Date(now - weeks * 7 * 24 * 60 * 60 * 1000);
-    } else if (timeText.includes("小时前")) {
-        let hours = parseInt(timeText);
-        time = new Date(now - hours * 60 * 60 * 1000);
-    } else if (timeText.includes("分钟前")) {
-        let minutes = parseInt(timeText);
-        time = new Date(now - minutes * 60 * 1000);
-    } else {
-        let [month, day] = timeText.split('-').map(Number);
-        let year = now.getFullYear();
-        let fullDate = new Date(year, month - 1, day);
-        if (fullDate > now) {
-            year--;
+    if (timeText.includes("年前")) {
+        let years = parseInt(timeText);
+        return (currentYear - years).toString();
+    } else if (timeText.includes("月前") || timeText.includes("天前") || 
+               timeText.includes("小时前") || timeText.includes("分钟前")) {
+        let time;
+        if (timeText.includes("月前")) {
+            let months = parseInt(timeText);
+            time = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+        } else if (timeText.includes("天前")) {
+            let days = parseInt(timeText);
+            time = new Date(now - days * 24 * 60 * 60 * 1000);
+        } else if (timeText.includes("小时前")) {
+            let hours = parseInt(timeText);
+            time = new Date(now - hours * 60 * 60 * 1000);
+        } else if (timeText.includes("分钟前")) {
+            let minutes = parseInt(timeText);
+            time = new Date(now - minutes * 60 * 1000);
         }
-        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        return time.toISOString().split('T')[0];
+    } 
+    else if (timeText.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+        return timeText.split('-').map((part, index) => 
+            index > 0 ? part.padStart(2, '0') : part
+        ).join('-');
+    } 
+    else if (timeText.match(/^\d{1,2}-\d{1,2}$/)) {
+        let [month, day] = timeText.split('-').map(Number);
+        return `${currentYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    } 
+    else {
+        return timeText;
     }
-
-    return time.toISOString().split('T')[0];
 }
 
     function getVideosFromPage() {
