@@ -359,7 +359,10 @@ function parseTime(timeText) {
     let now = new Date();
     let currentYear = now.getFullYear();
 
-    if (timeText.includes("年前")) {
+    if (timeText === "昨天") {
+        let yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        return yesterday.toISOString().split('T')[0];
+    } else if (timeText.includes("年前")) {
         let years = parseInt(timeText);
         return (currentYear - years).toString();
     } else if (timeText.includes("月前") || timeText.includes("天前") || 
