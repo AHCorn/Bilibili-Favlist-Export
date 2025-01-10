@@ -1,20 +1,22 @@
 // ==UserScript==
 // @name         哔哩哔哩收藏夹导出
-// @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
+// @namespace    https://github.com/vanilla-tiramisu/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      2.1.1
+// @require      https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js
+// @version      3.0.0
 // @license      GPL-3.0
-// @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
-// @author       AHCorn
+// @description  （适配新版页面）导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
+// @author       AHCorn, vanilla-tiramisu
 // @match        http*://space.bilibili.com/*/*
 // @grant        GM_addStyle
 // @grant        GM_download
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @updateURL    https://github.com/AHCorn/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
-// @downloadURL  https://github.com/AHCorn/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
+// @updateURL    https://github.com/vanilla-tiramisu/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
+// @downloadURL  https://github.com/vanilla-tiramisu/Bilibili-Favlist-Export/raw/main/Bilibili-Favlist-Export.user.js
 // ==/UserScript==
+
 
 (function () {
     'use strict';
@@ -302,23 +304,23 @@
     let bookmarkTitleInput = null;
     let globalFolderNameInput = null;
     let lastAddedFolderName = "";
-    let totalPage = 0;
+    let totalPage = 1;
     let currentPage = 0;
     let isExporting = false;
     let exportFormat = GM_getValue('exportFormat', 'csv');
 
     function getCSVFileName() {
-        let userName = $("#h-name").text();
+        let userName = $(".nickname").text();
         return userName + "的收藏夹.csv";
     }
 
     function getHTMLFileName() {
-        let userName = $("#h-name").text();
+        let userName = $(".nickname").text();
         return userName + "的收藏夹.html";
     }
 
     function getFolderName() {
-        return $("#fav-createdList-container .fav-item.cur a.text").text().trim();
+        return document.querySelector(".favlist-info-detail__title .vui_ellipsis").innerHTML;
     }
 
     function escapeCSV(field) {
@@ -355,59 +357,27 @@
         return parts.join(',');
     }
 
-function parseTime(timeText) {
-    let now = new Date();
-    let currentYear = now.getFullYear();
-
-    if (timeText === "昨天") {
-        let yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        return yesterday.toISOString().split('T')[0];
-    } else if (timeText.includes("年前")) {
-        let years = parseInt(timeText);
-        return (currentYear - years).toString();
-    } else if (timeText.includes("月前") || timeText.includes("天前") || 
-               timeText.includes("小时前") || timeText.includes("分钟前")) {
-        let time;
-        if (timeText.includes("月前")) {
-            let months = parseInt(timeText);
-            time = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
-        } else if (timeText.includes("天前")) {
-            let days = parseInt(timeText);
-            time = new Date(now - days * 24 * 60 * 60 * 1000);
-        } else if (timeText.includes("小时前")) {
-            let hours = parseInt(timeText);
-            time = new Date(now - hours * 60 * 60 * 1000);
-        } else if (timeText.includes("分钟前")) {
-            let minutes = parseInt(timeText);
-            time = new Date(now - minutes * 60 * 1000);
-        }
-        return time.toISOString().split('T')[0];
-    } 
-    else if (timeText.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-        return timeText.split('-').map((part, index) => 
-            index > 0 ? part.padStart(2, '0') : part
-        ).join('-');
-    } 
-    else if (timeText.match(/^\d{1,2}-\d{1,2}$/)) {
-        let [month, day] = timeText.split('-').map(Number);
-        return `${currentYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-    } 
-    else {
-        return timeText;
+    function parseTime(timeText) {
+        return timeText.slice(3);
     }
-}
 
     function getVideosFromPage() {
         var results = [];
         var folderName = getFolderName().replace(/\//g, '\\');
-        $(".fav-video-list > li").each(function () {
-            var titleElement = $(this).find("a.title");
-            var title = titleElement.text().replace(/,/g, '');
+        $(".fav-list-main .items__item").each(function () {
+            var titleElement = this.querySelector(".bili-video-card__title");
+            var title = titleElement.title.replace(/,/g, '');
             if (title !== "已失效视频") {
-                var url = 'https:' + titleElement.attr("href");
-                var timeElement = $(this).find(".meta.pubdate");
-                var timeText = timeElement.text().trim().replace("收藏于：", "").trim();
-                var created = parseTime(timeText);
+                let url = this.querySelector(".bili-video-card__title a").href
+                let subtitle = this.querySelector(".bili-video-card__subtitle a")
+                let timeText = ''
+                if (subtitle) // 一般视频
+                    timeText = subtitle.querySelector("div:last-child>span").title
+                else { // 特殊视频
+                    timeText = this.querySelector(".bili-video-card__subtitle>span").title
+                    title = timeText.trim().split("·")[0].trim();
+                }
+                var created = parseTime(timeText.trim().split("·").slice(-1)[0].trim());
                 results.push(generateCSVLine(folderName, title, url, created));
                 if (exportFormat === "html") {
                     addHTMLBookmark(folderName, title, url, created);
@@ -417,157 +387,161 @@ function parseTime(timeText) {
         return results.join('\n');
     }
 
-function processVideos() {
+    function processVideos() {
         if (isExporting) {
             csvContent += getVideosFromPage() + '\n';
             currentPage++;
             updateProgress(Math.round((currentPage / totalPage) * 100));
-            if (currentPage >= totalPage || $(".be-pager-next:visible").length == 0) {
+            if (currentPage >= totalPage) {
                 if (exportCurrentFolderOnly) {
                     finishExport();
                 } else {
                     setTimeout(changeList, DELAY);
                 }
             } else {
-                $(".be-pager-next").click();
+                $(".vui_pagenation--btn-side").click();
                 setTimeout(processVideos, DELAY);
             }
         }
     }
 
-function* listGen() {
-    for (let list of $("#fav-createdList-container .fav-item a").get()) {
-        yield list;
+    function* listGen() {
+        for (let list of $(".fav-collapse:nth-child(-n+2) .vui_collapse_item .fav-sidebar-item .vui_sidebar-item").get()) {
+            yield list;
+        }
     }
-}
 
-function changeList() {
-    if (isExporting) {
-        if (exportCurrentFolderOnly) {
-            processVideos();
-        } else {
-            let list = gen.next().value;
-            if (list) {
-                list.click();
-                setTimeout(() => {
-                    totalPage = parseInt($(".be-pager-total").text().match(/\d+/)[0]) || 1;
-                    currentPage = 0;
-                    updateProgress(0);
-                    let currentFolderName = getFolderName();
-                    document.querySelector('#current-exporting').textContent = `正在导出：${currentFolderName}`;
-                    document.querySelector('#current-exporting').classList.remove('completed');
-                    processVideos();
-                }, DELAY);
+    function changeList() {
+        if (isExporting) {
+            if (exportCurrentFolderOnly) {
+                processVideos();
             } else {
-                finishExport();
+                let list = gen.next().value;
+                if (list) {
+                    list.click();
+                    setTimeout(() => {
+                        let PageCountDesc = document.querySelector(".vui_pagenation-go__count")
+                        if (PageCountDesc)
+                            totalPage = parseInt(PageCountDesc.innerHTML.match(/\d+/)[0]) || 1;
+                        currentPage = 0;
+                        updateProgress(0);
+                        let currentFolderName = getFolderName();
+                        document.querySelector('#current-exporting').textContent = `正在导出：${currentFolderName}`;
+                        document.querySelector('#current-exporting').classList.remove('completed');
+                        processVideos();
+                    }, DELAY);
+                } else {
+                    finishExport();
+                }
             }
         }
     }
-}
 
-function updateProgress(percentage) {
-    exportButton.textContent = `导出中... ${percentage}%`;
-    exportButton.style.setProperty('--progress', `${percentage}%`);
-    exportButton.style.backgroundImage = `linear-gradient(to right, rgba(255,255,255,0.2) ${percentage}%, transparent ${percentage}%)`;
-}
+    function updateProgress(percentage) {
+        exportButton.textContent = `导出中... ${percentage}%`;
+        exportButton.style.setProperty('--progress', `${percentage}%`);
+        exportButton.style.backgroundImage = `linear-gradient(to right, rgba(255,255,255,0.2) ${percentage}%, transparent ${percentage}%)`;
+    }
 
-function finishExport() {
-    isExporting = false;
-    exportButton.textContent = "立即下载";
-    exportButton.disabled = false;
-    let currentExporting = document.querySelector('#current-exporting');
-    currentExporting.textContent = "导出完成";
-    currentExporting.classList.add('completed');
-    exportButton.onclick = () => {
-        if (exportFormat === "csv") {
-            downloadCSV();
-        } else if (exportFormat === "html") {
-            downloadHTML();
+    function finishExport() {
+        isExporting = false;
+        exportButton.textContent = "立即下载";
+        exportButton.disabled = false;
+        let currentExporting = document.querySelector('#current-exporting');
+        currentExporting.textContent = "导出完成";
+        currentExporting.classList.add('completed');
+        exportButton.onclick = () => {
+            if (exportFormat === "csv") {
+                downloadCSV();
+            } else if (exportFormat === "html") {
+                downloadHTML();
+            }
+            exportButton.textContent = "开始导出";
+            exportButton.disabled = true;
+            setTimeout(() => {
+                exportButton.disabled = false;
+            }, 3000);
+        };
+    }
+
+    function startExport() {
+        if (exportFormat === "html" && (!bookmarkTitleInput.value || !globalFolderNameInput.value)) {
+            alert("请配置书签标题和全局父文件夹名称。");
+            return;
         }
-        exportButton.textContent = "开始导出";
+        GM_setValue('bookmarkTitle', bookmarkTitleInput.value);
+        GM_setValue('globalFolderName', globalFolderNameInput.value);
         exportButton.disabled = true;
-        setTimeout(() => {
-            exportButton.disabled = false;
-        }, 3000);
-    };
-}
-
-function startExport() {
-    if (exportFormat === "html" && (!bookmarkTitleInput.value || !globalFolderNameInput.value)) {
-        alert("请配置书签标题和全局父文件夹名称。");
-        return;
+        exportButton.textContent = "导出中... 0%";
+        isExporting = true;
+        htmlContent = "";
+        csvContent = "\uFEFF" + csvHeaderActive.join(",") + "\n";
+        document.querySelector('#current-exporting').textContent = "准备开始导出...";
+        document.querySelector('#current-exporting').classList.remove('completed');
+        if (exportCurrentFolderOnly) {
+            let PageCountDesc = document.querySelector(".vui_pagenation-go__count")
+            if (PageCountDesc)
+                totalPage = parseInt(PageCountDesc.innerHTML.match(/\d+/)[0]) || 1;
+            currentPage = 0;
+            processVideos();
+        } else {
+            gen = listGen();
+            changeList();
+        }
     }
-    GM_setValue('bookmarkTitle', bookmarkTitleInput.value);
-    GM_setValue('globalFolderName', globalFolderNameInput.value);
-    exportButton.disabled = true;
-    exportButton.textContent = "导出中... 0%";
-    isExporting = true;
-    htmlContent = "";
-    csvContent = "\uFEFF" + csvHeaderActive.join(",") + "\n";
-    document.querySelector('#current-exporting').textContent = "准备开始导出...";
-    document.querySelector('#current-exporting').classList.remove('completed');
-    if (exportCurrentFolderOnly) {
-        totalPage = parseInt($(".be-pager-total").text().match(/\d+/)[0]) || 1;
-        currentPage = 0;
-        processVideos();
-    } else {
-        gen = listGen();
-        changeList();
-    }
-}
 
-function downloadCSV() {
-    let fileName = getCSVFileName();
-    let blobUrl = URL.createObjectURL(new Blob([csvContent], {type: 'text/csv;charset=utf-8;'}));
-    GM_download({
-        url: blobUrl,
-        name: fileName,
-        onload: () => {
-            hidePanel();
-        },
-        onerror: () => {
-            alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
-            let htmlContent = `
+    function downloadCSV() {
+        let fileName = getCSVFileName();
+        let blobUrl = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
+        GM_download({
+            url: blobUrl,
+            name: fileName,
+            onload: () => {
+                hidePanel();
+            },
+            onerror: () => {
+                alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
+                let htmlContent = `
 <html>
 <head><meta charset="UTF-8"></head>
 <body><a href="${blobUrl}" download="${fileName}">点击下载 CSV 文件</a></body>
 </html>`;
-            let htmlBlob = new Blob([htmlContent], {type: 'text/html;charset=utf-8;'});
-            let htmlBlobUrl = URL.createObjectURL(htmlBlob);
-            window.open(htmlBlobUrl, '_blank');
-        }
-    });
-}
+                let htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+                let htmlBlobUrl = URL.createObjectURL(htmlBlob);
+                window.open(htmlBlobUrl, '_blank');
+            }
+        });
+    }
 
-function downloadHTML() {
-    let fileName = getHTMLFileName();
-    let globalParentFolderName = globalFolderNameInput.value;
-    let htmlFinalContent = htmlTemplateStart.replace("{globalFolderName}", globalFolderNameInput.value).replace("{BOOKMARK_TITLE}", bookmarkTitleInput.value.trim()) + htmlContent + HTML_TEMPLATE_END;
-    let blobUrl = URL.createObjectURL(new Blob([htmlFinalContent], {type: 'text/html;charset=utf-8;'}));
-    GM_download({
-        url: blobUrl,
-        name: fileName,
-        onload: () => {
-            hidePanel();
-        },
-        onerror: () => {
-            alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
-            let htmlContent = `
+    function downloadHTML() {
+        let fileName = getHTMLFileName();
+        let globalParentFolderName = globalFolderNameInput.value;
+        let htmlFinalContent = htmlTemplateStart.replace("{globalFolderName}", globalFolderNameInput.value).replace("{BOOKMARK_TITLE}", bookmarkTitleInput.value.trim()) + htmlContent + HTML_TEMPLATE_END;
+        let blobUrl = URL.createObjectURL(new Blob([htmlFinalContent], { type: 'text/html;charset=utf-8;' }));
+        GM_download({
+            url: blobUrl,
+            name: fileName,
+            onload: () => {
+                hidePanel();
+            },
+            onerror: () => {
+                alert('下载失败，正在尝试弹出新标签页进行下载，请允许弹窗权限');
+                let htmlContent = `
 <html>
 <head><meta charset="UTF-8"></head>
 <body><a href="${blobUrl}" download="${fileName}">点击下载 HTML 文件</a></body>
 </html>`;
-            let htmlBlob = new Blob([htmlContent], {type: 'text/html;charset=utf-8;'});
-            let htmlBlobUrl = URL.createObjectURL(htmlBlob);
-            window.open(htmlBlobUrl, '_blank');
-        }
-    });
-}
+                let htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+                let htmlBlobUrl = URL.createObjectURL(htmlBlob);
+                window.open(htmlBlobUrl, '_blank');
+            }
+        });
+    }
 
-function createPanel() {
-    panel = document.createElement("div");
-    panel.id = "bilibili-export-panel";
-    panel.innerHTML = `
+    function createPanel() {
+        panel = document.createElement("div");
+        panel.id = "bilibili-export-panel";
+        panel.innerHTML = `
         <h2>收藏夹导出设置</h2>
         <div id="current-exporting">点击下方按钮开始导出</div>
         <div id="formatSelector">
@@ -622,102 +596,102 @@ function createPanel() {
         </div>
         <button id="export-button">开始导出</button>
     `;
-    document.body.appendChild(panel);
+        document.body.appendChild(panel);
 
-    let overlay = document.createElement("div");
-    overlay.id = "panel-overlay";
-    document.body.appendChild(overlay);
+        let overlay = document.createElement("div");
+        overlay.id = "panel-overlay";
+        document.body.appendChild(overlay);
 
-    formatButtons = panel.querySelectorAll('.formatButton');
-    formatButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            exportFormat = button.dataset.format;
-            GM_setValue('exportFormat', exportFormat);
-            updateFormatButtons();
-            toggleOptions();
+        formatButtons = panel.querySelectorAll('.formatButton');
+        formatButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                exportFormat = button.dataset.format;
+                GM_setValue('exportFormat', exportFormat);
+                updateFormatButtons();
+                toggleOptions();
+            });
         });
-    });
 
-    folderInputSection = panel.querySelector('#html-options');
-    bookmarkTitleInput = panel.querySelector('#bookmark-title');
-    globalFolderNameInput = panel.querySelector('#global-folder-name');
+        folderInputSection = panel.querySelector('#html-options');
+        bookmarkTitleInput = panel.querySelector('#bookmark-title');
+        globalFolderNameInput = panel.querySelector('#global-folder-name');
 
-    ['title', 'url', 'foldername', 'created'].forEach(option => {
-        panel.querySelector(`#include-${option}`).addEventListener('change', (e) => {
-            csvInclude[option] = e.target.checked;
-            GM_setValue(`include_${option}`, csvInclude[option]);
-            updateCSVHeader();
+        ['title', 'url', 'foldername', 'created'].forEach(option => {
+            panel.querySelector(`#include-${option}`).addEventListener('change', (e) => {
+                csvInclude[option] = e.target.checked;
+                GM_setValue(`include_${option}`, csvInclude[option]);
+                updateCSVHeader();
+            });
         });
-    });
 
-    panel.querySelector('#export-current-folder-only').addEventListener('change', (e) => {
-        exportCurrentFolderOnly = e.target.checked;
-        GM_setValue('exportCurrentFolderOnly', exportCurrentFolderOnly);
-    });
+        panel.querySelector('#export-current-folder-only').addEventListener('change', (e) => {
+            exportCurrentFolderOnly = e.target.checked;
+            GM_setValue('exportCurrentFolderOnly', exportCurrentFolderOnly);
+        });
 
-    exportButton = panel.querySelector('#export-button');
-    exportButton.onclick = startExport;
+        exportButton = panel.querySelector('#export-button');
+        exportButton.onclick = startExport;
 
-    overlay.addEventListener('click', hidePanel);
+        overlay.addEventListener('click', hidePanel);
 
-    updateFormatButtons();
-    toggleOptions();
-    loadSavedSettings();
-}
+        updateFormatButtons();
+        toggleOptions();
+        loadSavedSettings();
+    }
 
-function updateFormatButtons() {
-    formatButtons.forEach(button => {
-        button.classList.toggle('selected', button.dataset.format === exportFormat);
-    });
-    const slider = panel.querySelector('.slider');
-    slider.style.transform = exportFormat === 'csv' ? 'translateX(0)' : 'translateX(100%)';
-}
+    function updateFormatButtons() {
+        formatButtons.forEach(button => {
+            button.classList.toggle('selected', button.dataset.format === exportFormat);
+        });
+        const slider = panel.querySelector('.slider');
+        slider.style.transform = exportFormat === 'csv' ? 'translateX(0)' : 'translateX(100%)';
+    }
 
-function toggleOptions() {
-    panel.querySelector('#csv-options').style.display = exportFormat === 'csv' ? 'block' : 'none';
-    panel.querySelector('#html-options').style.display = exportFormat === 'html' ? 'block' : 'none';
-}
+    function toggleOptions() {
+        panel.querySelector('#csv-options').style.display = exportFormat === 'csv' ? 'block' : 'none';
+        panel.querySelector('#html-options').style.display = exportFormat === 'html' ? 'block' : 'none';
+    }
 
-function loadSavedSettings() {
-    ['title', 'url', 'foldername', 'created'].forEach(option => {
-        const saved = GM_getValue(`include_${option}`);
-        if (saved !== undefined) {
-            csvInclude[option] = saved;
-            panel.querySelector(`#include-${option}`).checked = saved;
-        }
-    });
-    updateCSVHeader();
+    function loadSavedSettings() {
+        ['title', 'url', 'foldername', 'created'].forEach(option => {
+            const saved = GM_getValue(`include_${option}`);
+            if (saved !== undefined) {
+                csvInclude[option] = saved;
+                panel.querySelector(`#include-${option}`).checked = saved;
+            }
+        });
+        updateCSVHeader();
 
-    bookmarkTitleInput.value = GM_getValue('bookmarkTitle', '');
-    globalFolderNameInput.value = GM_getValue('globalFolderName', '');
-    exportCurrentFolderOnly = GM_getValue('exportCurrentFolderOnly', false);
-    panel.querySelector('#export-current-folder-only').checked = exportCurrentFolderOnly;
-}
+        bookmarkTitleInput.value = GM_getValue('bookmarkTitle', '');
+        globalFolderNameInput.value = GM_getValue('globalFolderName', '');
+        exportCurrentFolderOnly = GM_getValue('exportCurrentFolderOnly', false);
+        panel.querySelector('#export-current-folder-only').checked = exportCurrentFolderOnly;
+    }
 
-function showPanel() {
-    panel.style.opacity = 0;
-    panel.style.display = 'block';
-    document.getElementById('panel-overlay').style.display = 'block';
-    setTimeout(() => {
-        panel.style.opacity = 1;
-    }, 0);
-}
+    function showPanel() {
+        panel.style.opacity = 0;
+        panel.style.display = 'block';
+        document.getElementById('panel-overlay').style.display = 'block';
+        setTimeout(() => {
+            panel.style.opacity = 1;
+        }, 0);
+    }
 
-function hidePanel() {
-    panel.style.opacity = 0;
-    document.getElementById('panel-overlay').style.display = 'none';
-    setTimeout(() => {
-        panel.style.display = 'none';
-    }, 300);
-}
+    function hidePanel() {
+        panel.style.opacity = 0;
+        document.getElementById('panel-overlay').style.display = 'none';
+        setTimeout(() => {
+            panel.style.display = 'none';
+        }, 300);
+    }
 
-function init() {
-    createPanel();
-    GM_registerMenuCommand("导出 Bilibili 收藏夹", showPanel);
-}
+    function init() {
+        createPanel();
+        GM_registerMenuCommand("导出 Bilibili 收藏夹", showPanel);
+    }
 
-if (location.href.includes("https://space.bilibili.com/") && location.href.includes("/favlist")) {
-    init();
-}
+    if (location.href.includes("https://space.bilibili.com/") && location.href.includes("/favlist")) {
+        init();
+    }
 
 })();
