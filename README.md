@@ -50,15 +50,15 @@
 var delay = 2000; //等待时间
 var gen = listGen();
 var csvContent = "\uFEFF";
-csvContent += "folder,title,url\n";
+csvContent += "folder,title,url,created\n";
 
 function getCSVFileName() {
-    var userName = $("#h-name").text();
+    let userName = document.querySelector(".nickname").innerHTML;
     return userName + "的收藏夹.csv";
 }
 
 function getFolderName() {
-    return $("#fav-createdList-container .fav-item.cur a.text").text().trim();
+    return document.querySelector(".favlist-info-detail__title .vui_ellipsis").innerHTML;
 }
 
 function escapeCSV(field) {
@@ -67,38 +67,64 @@ function escapeCSV(field) {
 
 function getVideosFromPage() {
     var results = [];
-    var folderName = getFolderName().replace(/\//g, '\\'); // 替换 / 为 \ 避免 Raindrop 识别出错
-    $(".fav-video-list > li > a.title").each(function() {
-        var title = $(this).text().replace(/,/g, '');
+    var folderName = getFolderName().replace(/\//g, '\\');
+    document.querySelectorAll(".fav-list-main .items__item").forEach(function (item) {
+        var titleElement = item.querySelector(".bili-video-card__title");
+        var title = titleElement.title.replace(/,/g, '');
         if (title !== "已失效视频") {
-            var url = 'https:' + $(this).attr("href");
-            results.push(escapeCSV(folderName) + ',' + escapeCSV(title) + ',' + escapeCSV(url));
+            let url = item.querySelector(".bili-video-card__title a").href
+            let subtitleLink = item.querySelector(".bili-video-card__subtitle a")
+            let timeText = ''
+            if (subtitleLink) // 一般视频
+                timeText = subtitleLink.querySelector("div:last-child>span").title
+            else { // 链接不可点击
+                let subtitle = item.querySelector(".bili-video-card__subtitle>span").title
+                if (subtitle.includes("收藏于")) {// 特殊视频，如电影
+                    timeText = subtitle;
+                    title = timeText.trim().split("·")[0].trim();
+                }
+                else { // 某些订阅合集中的视频
+                    timeText = subtitle;
+                    title = titleElement.title.replace(/,/g, '');
+                }
+            }
+            var created = timeText.trim().split("·").slice(-1)[0].trim().slice(3);
+            results.push(escapeCSV(folderName) + ',' + escapeCSV(title) + ',' + escapeCSV(url) + ',' + escapeCSV(created));
         }
     });
     return results.join('\n');
 }
 
 function processVideos() {
-    csvContent += getVideosFromPage() + '\n'; // 自动换行
-    if ($(".be-pager-next:visible").length == 0) {
-        setTimeout(changeList, delay);
-    } else {
-        $(".be-pager-next").click();
+    csvContent += getVideosFromPage() + '\n';
+    currentPage++;
+    let turnPage = document.querySelector(".vui_pagenation--btn-side:last-child");
+    if (currentPage < totalPage && turnPage) {
+        turnPage.click();
         setTimeout(processVideos, delay);
+    } else {
+        setTimeout(changeList, delay);
     }
 }
 
 function* listGen() {
-    for (var list of $("#fav-createdList-container .fav-item a").get()) {
+    const lists = document.querySelectorAll(".fav-collapse:nth-child(-n+2) .vui_collapse_item .fav-sidebar-item .vui_sidebar-item");
+    for (let list of lists) {
         yield list;
     }
 }
 
 function changeList() {
-    var list = gen.next().value;
+    let list = gen.next().value;
     if (list) {
         list.click();
-        setTimeout(processVideos, delay);
+        setTimeout(() => {
+            let PageCountDesc = document.querySelector(".vui_pagenation-go__count")
+            if (PageCountDesc)
+                totalPage = parseInt(PageCountDesc.innerHTML.match(/\d+/)[0]) || 1;
+            currentPage = 0;
+            processVideos();
+        }, delay);
     } else {
         downloadCSV();
     }

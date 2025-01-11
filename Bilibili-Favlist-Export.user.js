@@ -369,13 +369,21 @@
             var title = titleElement.title.replace(/,/g, '');
             if (title !== "已失效视频") {
                 let url = this.querySelector(".bili-video-card__title a").href
-                let subtitle = this.querySelector(".bili-video-card__subtitle a")
+                let subtitleLink = this.querySelector(".bili-video-card__subtitle a")
                 let timeText = ''
-                if (subtitle) // 一般视频
-                    timeText = subtitle.querySelector("div:last-child>span").title
-                else { // 特殊视频
-                    timeText = this.querySelector(".bili-video-card__subtitle>span").title
-                    title = timeText.trim().split("·")[0].trim();
+                if (subtitleLink) // 一般视频
+                    timeText = subtitleLink.querySelector("div:last-child>span").title
+                else { // 链接不可点击
+                    let subtitle = this.querySelector(".bili-video-card__subtitle>span").title
+                    if (subtitle.includes("收藏于")) {// 特殊视频，如电影
+                        timeText = subtitle;
+                        title = timeText.trim().split("·")[0].trim();
+                    }
+                    else { // 某些订阅合集中的视频
+                        timeText = subtitle;
+                        title = titleElement.title.replace(/,/g, '');
+
+                    }
                 }
                 var created = parseTime(timeText.trim().split("·").slice(-1)[0].trim());
                 results.push(generateCSVLine(folderName, title, url, created));
@@ -392,15 +400,17 @@
             csvContent += getVideosFromPage() + '\n';
             currentPage++;
             updateProgress(Math.round((currentPage / totalPage) * 100));
-            if (currentPage >= totalPage) {
+            let turnPage = document.querySelector(".vui_pagenation--btn-side:last-child");
+            if (currentPage < totalPage && turnPage) {
+                // console.log(`已导出：${currentPage},${totalPage}`);
+                turnPage.click();
+                setTimeout(processVideos, DELAY);
+            } else {
                 if (exportCurrentFolderOnly) {
                     finishExport();
                 } else {
                     setTimeout(changeList, DELAY);
                 }
-            } else {
-                $(".vui_pagenation--btn-side").click();
-                setTimeout(processVideos, DELAY);
             }
         }
     }
