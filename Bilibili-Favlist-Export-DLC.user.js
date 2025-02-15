@@ -2,7 +2,7 @@
 // @name         哔哩哔哩图文收藏导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.0
+// @version      1.1
 // @license      GPL-3.0
 // @description  导出哔哩哔哩图文收藏为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       安和（AHCorn）
@@ -598,47 +598,22 @@ ${htmlContent}
             border-radius: 50%;
             background-color: white;
         }
-        .title-length-input {
-            margin-top: 12px;
-            padding: 12px;
-            background-color: rgba(0,161,214,0.1);
-            border-radius: 8px;
-            display: none;
-            animation: slideDown 0.3s ease;
-        }
-        .title-length-input.show {
-            display: block;
-        }
-        .title-length-input label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #3c4043;
-            font-size: 14px;
-        }
-        .title-length-input input {
-            width: 70px;
-            padding: 6px 10px;
+        .inline-input {
+            width: 40px;
+            padding: 2px 4px;
             border: 1px solid #dadce0;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 4px;
+            font-size: inherit;
             color: #3c4043;
-            transition: all 0.2s ease;
+            text-align: center;
+            margin: 0 4px;
+            display: inline-block;
+            vertical-align: baseline;
         }
-        .title-length-input input:focus {
+        .inline-input:focus {
             border-color: #00a1d6;
             outline: none;
             box-shadow: 0 0 0 2px rgba(0,161,214,0.2);
-        }
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
     `);
 
@@ -706,13 +681,7 @@ ${htmlContent}
                 </label>
                 <label>
                     <input type="radio" name="title-mode" value="content">
-                    <span>使用动态内容前N个字符作为标题</span>
-                </label>
-            </div>
-            <div class="title-length-input">
-                <label>
-                    <span>标题长度：</span>
-                    <input type="number" id="title-length" min="1" max="100" value="20">
+                    <span>使用动态内容前<input type="number" id="title-length" class="inline-input" min="1" max="100" value="20">个字符作为标题</span>
                 </label>
             </div>
         </div>
@@ -851,9 +820,6 @@ ${htmlContent}
 
         const titleLengthInput = panel.querySelector('#title-length');
         titleLengthInput.value = GM_getValue('titleLength', 20);
-
-        const titleLengthSection = panel.querySelector('.title-length-input');
-        titleLengthSection.classList.toggle('show', savedTitleMode === 'content');
     }
 
     function showPanel() {
@@ -892,7 +858,6 @@ ${htmlContent}
         radio.addEventListener('change', (e) => {
             titleMode = e.target.value;
             GM_setValue('titleMode', titleMode);
-            updateTitleLengthVisibility();
         });
     });
 
@@ -903,15 +868,6 @@ ${htmlContent}
         e.target.value = titleLength;
         GM_setValue('titleLength', titleLength);
     });
-
-    function updateTitleLengthVisibility() {
-        const titleLengthInput = panel.querySelector('.title-length-input');
-        if (titleMode === 'content') {
-            titleLengthInput.classList.add('show');
-        } else {
-            titleLengthInput.classList.remove('show');
-        }
-    }
 
     bookmarkTitleInput.addEventListener('change', (e) => {
         GM_setValue('bookmarkTitle', e.target.value);
