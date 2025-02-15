@@ -2,7 +2,7 @@
 // @name         哔哩哔哩图文收藏导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.1
+// @version      1.2
 // @license      GPL-3.0
 // @description  导出哔哩哔哩图文收藏为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       安和（AHCorn）
