@@ -2,7 +2,7 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      3.0-Beta
+// @version      3.1
 // @license      GPL-3.0
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
@@ -44,9 +44,11 @@
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
 <H1>{BOOKMARK_TITLE}</H1>
-<DL><p><DT><H3 ADD_DATE="{dateNow}" LAST_MODIFIED="{dateNow}">{globalFolderName}</H3>
+<DL><p>
+<DT><H3 ADD_DATE="{dateNow}" LAST_MODIFIED="{dateNow}">{globalFolderName}</H3>
 <DL><p>`;
-    const HTML_TEMPLATE_END = `</DL><p>`;
+    const HTML_TEMPLATE_END = `</DL><p>
+</DL><p>`;
     let htmlContent = "";
     let csvInclude = {
         title: true,
@@ -587,8 +589,14 @@
 
     function addHTMLFolder(folderName) {
         if (addedFolders.has(folderName)) {
+            htmlContent += `</DL><p>\n`;
             return;
         }
+        
+        if (addedFolders.size > 0) {
+            htmlContent += `</DL><p>\n`;
+        }
+        
         addedFolders.add(folderName);
         // 获取当前时间戳
         let dateNow = getCurrentTimestamp();
@@ -596,7 +604,11 @@
     }
 
     function addHTMLBookmark(folderName, title, url, created) {
-        addHTMLFolder(folderName);
+        if (!addedFolders.has(folderName) || addedFolders.size === 0) {
+            addHTMLFolder(folderName);
+        } else if (Array.from(addedFolders).pop() !== folderName) {
+            addHTMLFolder(folderName);
+        }
 
         // 创建时间转换为时间戳
         let timestamp;
@@ -862,6 +874,10 @@
         let currentExporting = document.querySelector('#current-exporting');
 
         if (!isTerminated) {
+            if (addedFolders.size > 0) {
+                htmlContent += `</DL><p>\n`;
+            }
+            
             exportedData.csv = csvContent;
             exportedData.html = htmlTemplateStart
                 .replace("{globalFolderName}", exportedData.htmlConfig.globalFolderName)
