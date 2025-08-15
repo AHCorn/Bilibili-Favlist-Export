@@ -2,7 +2,7 @@
 // @name         哔哩哔哩收藏夹导出
 // @namespace    https://github.com/AHCorn/Bilibili-Favlist-Export
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      3.1
+// @version      3.2
 // @license      GPL-3.0
 // @description  导出哔哩哔哩收藏夹为 CSV 或 HTML 文件，以便导入 Raindrop 或 Firefox。
 // @author       AHCorn
@@ -20,7 +20,7 @@
 (function () {
     'use strict';
     // 要改导出速度可以在下方更改（单位ms）
-    let DELAY = GM_getValue('exportDelay', 2000); 
+    let DELAY = GM_getValue('exportDelay', 2000);
     const DELAY_SPEEDS = {
         slow: 4000,
         normal: 2000,
@@ -31,7 +31,10 @@
         title: "\uFEFFtitle",
         url: "url",
         foldername: "folder",
-        created: "created"
+        created: "created",
+        uploader: "uploader",
+        mid: "mid",
+        views: "views"
     };
     let csvHeaderActive = ["\uFEFFtitle", "url", "folder", "created"];
     function updateCSVHeader() {
@@ -54,7 +57,10 @@
         title: true,
         url: true,
         foldername: true,
-        created: true
+        created: true,
+        uploader: false,
+        mid: false,
+        views: false
     };
     let exportCurrentFolderOnly = false;
     let currentFolderName = "";
@@ -67,15 +73,17 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: linear-gradient(135deg, #f6f8fa, #e9ecef);
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.06);
-            padding: 30px;
-            width: 90%;
-            max-width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.08);
+            padding: 32px;
+            width: 95%;
+            max-width: 580px;
+            max-height: 85vh;
+            overflow-y: auto;
             display: none;
             z-index: 10000;
-            font-family: 'Segoe UI', 'Roboto', sans-serif;
-            transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
+            font-family: 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif;
+            transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1), height 0.4s ease-out;
             box-sizing: border-box !important;
             -webkit-box-sizing: border-box !important;
         }
@@ -92,21 +100,20 @@
         }
         #current-exporting {
             margin-bottom: 20px;
-            padding: 10px;
-            background-color: rgba(0,161,214,0.1);
-            border-left: 4px solid #00a1d6;
-            border-right: 4px solid #00a1d6;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(0,161,214,0.08), rgba(0,161,214,0.04));
+            border: 1px solid rgba(0,161,214,0.2);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
             color: #00a1d6;
             text-align: center;
-            transition: all 0.5s ease;
+            transition: all 0.5s cubic-bezier(0.25,0.8,0.25,1);
         }
         #current-exporting.completed {
-            background-color: rgba(76,175,80,0.1);
-            border-left-color: #4CAF50;
-            border-right-color: #4CAF50;
-            color: #4CAF50;
+            background: linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.04));
+            border-color: rgba(76,175,80,0.3);
+            color: #2e7d32;
         }
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -155,20 +162,129 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             pointer-events: none;
         }
+        .csv-options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 600px) {
+            .csv-options-grid {
+                grid-template-columns: 1fr;
+            }
+            #bilibili-export-panel {
+                width: 95%;
+                max-width: none;
+                padding: 24px;
+            }
+        }
+        .option-card {
+            position: relative;
+            padding: 16px;
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            user-select: none;
+        }
+        .option-card:hover {
+            border-color: #00a1d6;
+            box-shadow: 0 4px 16px rgba(0, 161, 214, 0.1);
+            transform: translateY(-1px);
+        }
+        .option-card.selected {
+            border-color: #00a1d6;
+            background: linear-gradient(135deg, rgba(0, 161, 214, 0.05), rgba(0, 161, 214, 0.02));
+        }
+        .option-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            background: #00a1d6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .option-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        .option-desc {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        .option-card.disabled {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+            cursor: not-allowed;
+        }
+        .option-card.disabled:hover {
+            border-color: #ef4444;
+            box-shadow: none;
+            transform: none;
+        }
+        .option-card.disabled .option-title {
+            color: #dc2626;
+        }
+        .option-card.disabled .option-desc {
+            color: #b91c1c;
+        }
+        .select-all-card {
+            position: relative;
+            padding: 16px;
+            background: linear-gradient(135deg, #00a1d6, #0086b3);
+            border: 2px solid #00a1d6;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            user-select: none;
+            color: white;
+            text-align: center;
+        }
+        .select-all-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 161, 214, 0.3);
+            background: linear-gradient(135deg, #0086b3, #006d94);
+        }
+        .select-all-card .option-title {
+            color: white;
+            margin-bottom: 4px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .select-all-card .option-desc {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+        }
         .toggle-switch {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 12px;
-            padding: 10px 15px;
-            background-color: #f1f3f4;
+            padding: 12px 16px;
+            background-color: #f8fafc;
             border-radius: 12px;
             transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
         }
-        .toggle-switch:hover { background-color: #e8eaed; }
+        .toggle-switch:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
         .toggle-switch label {
-            font-size: 16px;
-            color: #3c4043;
+            font-size: 15px;
+            color: #334155;
             font-weight: 600;
         }
         .switch {
@@ -299,31 +415,54 @@
         #refresh-button {
             display: none;
             width: 100%;
-            padding: 8px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+            padding: 12px;
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
             border-radius: 8px;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            margin-top: 12px;
             text-align: center;
             opacity: 0;
+            max-height: 0;
+            overflow: hidden;
             transform: translateY(-10px);
         }
         #refresh-button.show {
             display: block;
             opacity: 1;
+            max-height: 60px;
             transform: translateY(0);
+            animation: refreshButtonSlideIn 0.5s ease-out;
+        }
+        @keyframes refreshButtonSlideIn {
+            0% {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px) scale(0.95);
+                margin-top: 0;
+            }
+            50% {
+                max-height: 60px;
+                margin-top: 12px;
+            }
+            100% {
+                opacity: 1;
+                max-height: 60px;
+                transform: translateY(0) scale(1);
+                margin-top: 12px;
+            }
         }
         #refresh-button:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(76,175,80,0.3);
+            background: #e9ecef;
+            border-color: #adb5bd;
+            transform: translateY(-1px);
         }
         #refresh-button:active {
+            background: #dee2e6;
             transform: translateY(0);
         }
         .button-container {
@@ -331,6 +470,8 @@
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
+            transition: height 0.4s ease-out;
+            overflow: hidden;
         }
         #speedSelector {
             display: flex;
@@ -449,7 +590,7 @@
     let totalPage = 0;
     let currentPage = 0;
     let isExporting = false;
-    let hasExportedData = false; 
+    let hasExportedData = false;
     let exportFormat = GM_getValue('exportFormat', 'csv');
     let exportedData = {
         csv: null,
@@ -458,8 +599,30 @@
             title: '',
             globalFolderName: ''
         },
-        errors: [] 
+        errors: []
     };
+
+    // 公共函数：判断是否为新版页面
+    function isNewVersionPage() {
+        return $('.items').length > 0;
+    }
+
+    // 更新卡片状态（禁用样式）
+    function updateCardStates() {
+        if (!panel) return;
+
+        const extras = ['uploader', 'mid', 'views'];
+        const isCSV = exportFormat === 'csv';
+        const isNewPage = isNewVersionPage();
+
+        extras.forEach(option => {
+            const card = panel.querySelector(`[data-option="${option}"]`);
+            if (card) {
+                const shouldDisable = !isCSV || !isNewPage;
+                card.classList.toggle('disabled', shouldDisable);
+            }
+        });
+    }
 
     function getCSVFileName() {
         let userName = "";
@@ -507,7 +670,7 @@
         }
         return folderName || "未知收藏夹";
     }
-    
+
     function getFolderNameFromSidebar() {
         let selected = $(".fav-sidebar-item.vui_sidebar-item--active").first();
         if (selected.length > 0) {
@@ -550,7 +713,22 @@
                     var m2 = textContent.match(/收藏于((?:\d{4}[\/-])?\d{1,2}[\/-]\d{1,2})/);
                     created = m2 ? parseTime(m2[1]) : "";
                 }
-                results.push(generateCSVLine(folderName, title, url, created));
+                // 可选：昵称、MID、播放量（新版）
+                var uploaderName = "";
+                if (pubText) {
+                    uploaderName = pubText.split('·')[0].trim();
+                } else {
+                    var subText = $(this).find(".bili-video-card__subtitle").text().trim();
+                    uploaderName = subText.split('·')[0].trim();
+                }
+                var uploaderId = "";
+                var authorHref = $(this).find(".bili-video-card__subtitle a.bili-video-card__author").attr("href") || "";
+                if (authorHref) {
+                    var idMatch = authorHref.match(/space\.bilibili\.com\/(\d+)/);
+                    uploaderId = idMatch ? idMatch[1] : "";
+                }
+                var playCount = $(this).find(".bili-cover-card__stats .bili-cover-card__stat").first().find("span").text().trim() || "";
+                results.push(generateCSVLine(folderName, title, url, created, uploaderName, uploaderId, playCount));
                 addHTMLBookmark(folderName, title, url, created);
             });
         }
@@ -572,7 +750,8 @@
                 var timeElement = $(this).find(".meta.pubdate");
                 var timeText = timeElement.text().trim().replace("收藏于：", "").trim();
                 var created = parseTime(timeText);
-                results.push(generateCSVLine(folderName, title, url, created));
+                // 旧版不支持新增字段
+                results.push(generateCSVLine(folderName, title, url, created, "", "", ""));
                 addHTMLBookmark(folderName, title, url, created);
             });
         }
@@ -592,11 +771,11 @@
             htmlContent += `</DL><p>\n`;
             return;
         }
-        
+
         if (addedFolders.size > 0) {
             htmlContent += `</DL><p>\n`;
         }
-        
+
         addedFolders.add(folderName);
         // 获取当前时间戳
         let dateNow = getCurrentTimestamp();
@@ -621,12 +800,15 @@
         htmlContent += `<DT><A HREF="${url}" ADD_DATE="${timestamp}" LAST_MODIFIED="${timestamp}">${title}</A>\n`;
     }
 
-    function generateCSVLine(folderName, title, url, created) {
+    function generateCSVLine(folderName, title, url, created, uploaderName, uploaderId, playCount) {
         let parts = [];
         if (csvInclude.title) parts.push(escapeCSV(title));
         if (csvInclude.url) parts.push(escapeCSV(url));
         if (csvInclude.foldername) parts.push(escapeCSV(folderName));
         if (csvInclude.created) parts.push(escapeCSV(created));
+        if (csvInclude.uploader) parts.push(escapeCSV(uploaderName || ""));
+        if (csvInclude.mid) parts.push(escapeCSV(uploaderId || ""));
+        if (csvInclude.views) parts.push(escapeCSV(playCount || ""));
         return parts.join(',');
     }
 
@@ -825,18 +1007,18 @@
 
         exportedData.errors = [];
         htmlContent = "";
-        addedFolders = new Set(); 
+        addedFolders = new Set();
         csvContent = "\uFEFF" + csvHeaderActive.join(",") + "\n";
 
         GM_setValue('bookmarkTitle', bookmarkTitleInput.value);
         GM_setValue('globalFolderName', globalFolderNameInput.value);
-        exportButton.disabled = false; 
-        exportButton.style.cursor = 'pointer'; 
+        exportButton.disabled = false;
+        exportButton.style.cursor = 'pointer';
         exportButton.innerHTML = "导出中... 0%";
         isExporting = true;
         document.querySelector('#current-exporting').textContent = "准备开始导出...";
         document.querySelector('#current-exporting').classList.remove('completed');
-        exportButton.classList.add('exporting'); 
+        exportButton.classList.add('exporting');
 
         exportButton.onclick = () => {
             if (confirm('确定要终止导出吗？')) {
@@ -877,7 +1059,7 @@
             if (addedFolders.size > 0) {
                 htmlContent += `</DL><p>\n`;
             }
-            
+
             exportedData.csv = csvContent;
             exportedData.html = htmlTemplateStart
                 .replace("{globalFolderName}", exportedData.htmlConfig.globalFolderName)
@@ -1026,33 +1208,46 @@
             <div class="formatButton" data-format="html">HTML 格式</div>
         </div>
         <div id="csv-options">
-            <div class="toggle-switch">
-                <label for="include-title">包含标题</label>
-                <label class="switch">
-                    <input type="checkbox" id="include-title" checked>
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-            <div class="toggle-switch">
-                <label for="include-url">包含网址</label>
-                <label class="switch">
-                    <input type="checkbox" id="include-url" checked>
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-            <div class="toggle-switch">
-                <label for="include-foldername">包含收藏夹名称</label>
-                <label class="switch">
-                    <input type="checkbox" id="include-foldername" checked>
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-            <div class="toggle-switch">
-                <label for="include-created">包含收藏时间</label>
-                <label class="switch">
-                    <input type="checkbox" id="include-created" checked>
-                    <span class="switch-slider"></span>
-                </label>
+            <div class="csv-options-grid">
+                <div class="option-card selected" data-option="title">
+                    <div class="option-title">标题</div>
+                    <div class="option-desc">视频标题信息</div>
+                    <input type="checkbox" id="include-title" checked style="display:none">
+                </div>
+                <div class="option-card selected" data-option="url">
+                    <div class="option-title">网址</div>
+                    <div class="option-desc">视频链接地址</div>
+                    <input type="checkbox" id="include-url" checked style="display:none">
+                </div>
+                <div class="option-card selected" data-option="foldername">
+                    <div class="option-title">收藏夹名称</div>
+                    <div class="option-desc">所属收藏夹</div>
+                    <input type="checkbox" id="include-foldername" checked style="display:none">
+                </div>
+                <div class="option-card selected" data-option="created">
+                    <div class="option-title">收藏时间</div>
+                    <div class="option-desc">添加到收藏的日期</div>
+                    <input type="checkbox" id="include-created" checked style="display:none">
+                </div>
+                <div class="option-card" data-option="uploader">
+                    <div class="option-title">用户昵称</div>
+                    <div class="option-desc">视频上传者的昵称</div>
+                    <input type="checkbox" id="include-uploader" style="display:none">
+                </div>
+                <div class="option-card" data-option="mid">
+                    <div class="option-title">B站ID</div>
+                    <div class="option-desc">上传者的用户ID</div>
+                    <input type="checkbox" id="include-mid" style="display:none">
+                </div>
+                <div class="option-card" data-option="views">
+                    <div class="option-title">播放量</div>
+                    <div class="option-desc">视频观看次数统计</div>
+                    <input type="checkbox" id="include-views" style="display:none">
+                </div>
+                <div class="select-all-card" id="select-all-card">
+                    <div class="option-title">全选</div>
+                    <div class="option-desc">一键选择所有字段</div>
+                </div>
             </div>
         </div>
         <div id="html-options" style="display: none;">
@@ -1063,19 +1258,21 @@
                 <input type="text" id="global-folder-name" placeholder="全局父文件夹名称">
             </div>
         </div>
-        <div class="toggle-switch">
-            <label for="export-current-folder-only">仅导出当前文件夹</label>
-            <label class="switch">
-                <input type="checkbox" id="export-current-folder-only">
-                <span class="switch-slider"></span>
-            </label>
-        </div>
-        <div class="toggle-switch">
-            <label for="filter-invalid-videos">过滤已失效视频</label>
-            <label class="switch">
-                <input type="checkbox" id="filter-invalid-videos" checked>
-                <span class="switch-slider"></span>
-            </label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div class="toggle-switch">
+                <label for="export-current-folder-only">仅导出当前文件夹</label>
+                <label class="switch">
+                    <input type="checkbox" id="export-current-folder-only">
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="toggle-switch">
+                <label for="filter-invalid-videos">过滤已失效视频</label>
+                <label class="switch">
+                    <input type="checkbox" id="filter-invalid-videos" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
         </div>
         <div id="speedSelector">
             <div class="speed-slider"></div>
@@ -1130,13 +1327,98 @@
         bookmarkTitleInput = panel.querySelector('#bookmark-title');
         globalFolderNameInput = panel.querySelector('#global-folder-name');
 
-        ['title', 'url', 'foldername', 'created'].forEach(option => {
-            panel.querySelector(`#include-${option}`).addEventListener('change', (e) => {
-                csvInclude[option] = e.target.checked;
+        // 全选按钮逻辑
+        panel.querySelector('#select-all-card').addEventListener('click', function() {
+            const allCards = panel.querySelectorAll('.option-card[data-option]');
+            const allSelected = Array.from(allCards).every(card => {
+                const option = card.dataset.option;
+                if (['uploader', 'mid', 'views'].includes(option)) {
+                    // 新增字段需要检查是否可用
+                    if (exportFormat !== 'csv' || !isNewVersionPage()) {
+                        return true; // 不可用字段视为"已选中"，避免影响全选判断
+                    }
+                }
+                return card.classList.contains('selected');
+            });
+
+            // 切换所有字段状态
+            allCards.forEach(card => {
+                const option = card.dataset.option;
+                const checkbox = card.querySelector('input[type="checkbox"]');
+
+                // 新增字段特殊处理
+                if (['uploader', 'mid', 'views'].includes(option)) {
+                    if (exportFormat !== 'csv' || !isNewVersionPage()) {
+                        return; // 跳过不可用字段
+                    }
+                }
+
+                const shouldSelect = !allSelected;
+                checkbox.checked = shouldSelect;
+                csvInclude[option] = shouldSelect;
+                GM_setValue(`include_${option}`, shouldSelect);
+                card.classList.toggle('selected', shouldSelect);
+            });
+
+            updateCSVHeader();
+
+            // 更新全选按钮文案
+            this.querySelector('.option-title').textContent = allSelected ? '全选' : '取消全选';
+        });
+
+        // 卡片式选择交互
+        panel.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const option = this.dataset.option;
+                const checkbox = this.querySelector('input[type="checkbox"]');
+
+                // 新增字段的特殊验证
+                if (['uploader', 'mid', 'views'].includes(option)) {
+                    if (!checkbox.checked) { // 尝试开启
+                        if (exportFormat !== 'csv') {
+                            alert('该字段仅可在 CSV 导出中使用');
+                            return;
+                        }
+                        if (!isNewVersionPage()) {
+                            alert('该字段仅适配新版页面');
+                            return;
+                        }
+                    }
+                }
+
+                // 切换状态
+                checkbox.checked = !checkbox.checked;
+                csvInclude[option] = checkbox.checked;
                 GM_setValue(`include_${option}`, csvInclude[option]);
                 updateCSVHeader();
+
+                // 更新视觉状态
+                this.classList.toggle('selected', checkbox.checked);
+
+                // 更新全选按钮状态
+                updateSelectAllButton();
             });
         });
+
+        // 更新全选按钮状态的函数
+        function updateSelectAllButton() {
+            const allCards = panel.querySelectorAll('.option-card[data-option]');
+            const selectAllCard = panel.querySelector('#select-all-card');
+
+            const allSelected = Array.from(allCards).every(card => {
+                const option = card.dataset.option;
+                if (['uploader', 'mid', 'views'].includes(option)) {
+                    if (exportFormat !== 'csv' || !isNewVersionPage()) {
+                        return true; // 不可用字段不参与判断
+                    }
+                }
+                return card.classList.contains('selected');
+            });
+
+            selectAllCard.querySelector('.option-title').textContent = allSelected ? '取消全选' : '全选';
+        }
+
+
 
         panel.querySelector('#export-current-folder-only').addEventListener('change', (e) => {
             exportCurrentFolderOnly = e.target.checked;
@@ -1189,6 +1471,28 @@
         const slider = panel.querySelector('.slider');
         slider.style.transform = exportFormat === 'csv' ? 'translateX(0)' : 'translateX(100%)';
         toggleOptions();
+        // 更新卡片状态
+        updateCardStates();
+
+        if (exportFormat === 'html') {
+            // HTML 导出不支持新增字段，若已开启则自动关闭
+            const extras = ['uploader','mid','views'];
+            let needNotice = extras.some(key => csvInclude[key]);
+            if (needNotice) {
+                alert('"用户昵称 / B站ID / 播放量"仅可在 CSV 导出中使用。');
+            }
+            extras.forEach(key => {
+                if (csvInclude[key]) {
+                    csvInclude[key] = false;
+                    GM_setValue(`include_${key}`, false);
+                }
+                const el = panel.querySelector(`#include-${key}`);
+                const card = panel.querySelector(`[data-option="${key}"]`);
+                if (el) el.checked = false;
+                if (card) card.classList.remove('selected');
+            });
+            updateCSVHeader();
+        }
     }
 
     function toggleOptions() {
@@ -1205,11 +1509,14 @@
     }
 
     function loadSavedSettings() {
-        ['title', 'url', 'foldername', 'created'].forEach(option => {
+        ['title', 'url', 'foldername', 'created', 'uploader', 'mid', 'views'].forEach(option => {
             const saved = GM_getValue(`include_${option}`);
             if (saved !== undefined) {
                 csvInclude[option] = saved;
-                panel.querySelector(`#include-${option}`).checked = saved;
+                const checkbox = panel.querySelector(`#include-${option}`);
+                const card = panel.querySelector(`[data-option="${option}"]`);
+                if (checkbox) checkbox.checked = saved;
+                if (card) card.classList.toggle('selected', saved);
             }
         });
         updateCSVHeader();
@@ -1223,6 +1530,27 @@
 
         DELAY = GM_getValue('exportDelay', DELAY_SPEEDS.normal);
         updateSpeedButtons();
+
+        // 延迟执行页面检测和状态更新，确保DOM完全加载
+        setTimeout(() => {
+            // 启动时校验：HTML 格式或旧版页面均不允许三项开启
+            if (exportFormat !== 'csv' || !isNewVersionPage()) {
+                ['uploader','mid','views'].forEach(key => {
+                    if (csvInclude[key]) {
+                        csvInclude[key] = false;
+                        GM_setValue(`include_${key}`, false);
+                    }
+                    const el = panel.querySelector(`#include-${key}`);
+                    const card = panel.querySelector(`[data-option="${key}"]`);
+                    if (el) el.checked = false;
+                    if (card) card.classList.remove('selected');
+                });
+                updateCSVHeader();
+            }
+
+            // 初始化卡片状态
+            updateCardStates();
+        }, 500); // 延迟500ms确保页面加载完成
     }
 
     function updateSpeedButtons() {
@@ -1251,6 +1579,9 @@
         panel.style.opacity = 0;
         panel.style.display = 'block';
         document.getElementById('panel-overlay').style.display = 'block';
+
+        // 每次显示面板时重新检查卡片状态，确保状态正确
+        updateCardStates();
 
         if (hasExportedData) {
             exportButton.innerHTML = "立即下载";
