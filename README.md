@@ -20,7 +20,9 @@
 
 <div align="center">
 
-![image](https://github.com/user-attachments/assets/6614ad8c-745b-4a28-ab3f-071eeb48fff1)
+<img width="1280" height="1107" alt="图片" src="https://github.com/user-attachments/assets/320a4d65-43fb-45cd-bcbb-0f5f830d1ff5" />
+
+
 
 </div>
 
